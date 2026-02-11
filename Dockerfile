@@ -9,7 +9,7 @@ RUN apt-get update \
     procps \
     python3 \
     build-essential \
-    chromium 
+    chromium \
   && rm -rf /var/lib/apt/lists/*
 
 RUN npm install -g openclaw@latest
