@@ -105,6 +105,7 @@ function isConfigured() {
 
 let gatewayProc = null;
 let gatewayStarting = null;
+let shuttingDown = false;
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -187,6 +188,19 @@ async function startGateway() {
   gatewayProc.on("exit", (code, signal) => {
     console.error(`[gateway] exited code=${code} signal=${signal}`);
     gatewayProc = null;
+
+    // Auto-restart the gateway after a crash (unless we're shutting down)
+    if (!shuttingDown && isConfigured()) {
+      const delayMs = 3000;
+      console.log(`[gateway] will auto-restart in ${delayMs / 1000}s...`);
+      setTimeout(() => {
+        if (!gatewayProc && !shuttingDown && isConfigured()) {
+          ensureGatewayRunning().catch((err) => {
+            console.error(`[gateway] auto-restart failed: ${err.message}`);
+          });
+        }
+      }, delayMs);
+    }
   });
 }
 
@@ -1001,6 +1015,7 @@ server.on("upgrade", async (req, socket, head) => {
 
 async function gracefulShutdown(signal) {
   console.log(`[wrapper] received ${signal}, shutting down`);
+  shuttingDown = true;
 
   if (setupRateLimiter.cleanupInterval) {
     clearInterval(setupRateLimiter.cleanupInterval);
