@@ -622,6 +622,31 @@ app.post("/setup/api/run", requireSetupAuth, async (req, res) => {
       );
       extra += `[config] gateway.trustedProxies exit=${proxiesResult.code}\n`;
 
+      // Enable OpenAI-compatible HTTP API endpoint
+      const httpApiResult = await runCmd(
+        OPENCLAW_NODE,
+        clawArgs([
+          "config",
+          "set",
+          "gateway.http.endpoints.chatCompletions.enabled",
+          "true",
+        ]),
+      );
+      extra += `[config] gateway.http.endpoints.chatCompletions.enabled=true exit=${httpApiResult.code}\n`;
+
+      // Allow the Railway public domain in Control UI origins
+      const originsResult = await runCmd(
+        OPENCLAW_NODE,
+        clawArgs([
+          "config",
+          "set",
+          "--json",
+          "gateway.controlUi.allowedOrigins",
+          JSON.stringify([`https://${process.env.RAILWAY_PUBLIC_DOMAIN || "openclaw-production-0b2c.up.railway.app"}`]),
+        ]),
+      );
+      extra += `[config] gateway.controlUi.allowedOrigins exit=${originsResult.code}\n`;
+
       if (payload.model?.trim()) {
         extra += `[setup] Setting model to ${payload.model.trim()}...\n`;
         const modelResult = await runCmd(
@@ -758,6 +783,21 @@ app.post("/setup/api/reset", requireSetupAuth, async (_req, res) => {
   } catch (err) {
     res.status(500).type("text/plain").send(String(err));
   }
+});
+
+app.post("/setup/api/config-set", requireSetupAuth, async (req, res) => {
+  const { key, value, json: isJson } = req.body || {};
+  if (!key) {
+    return res.status(400).json({ ok: false, error: "Missing key" });
+  }
+  const args = ["config", "set"];
+  if (isJson) args.push("--json");
+  args.push(String(key), String(value ?? ""));
+  const result = await runCmd(OPENCLAW_NODE, clawArgs(args));
+  return res.status(result.code === 0 ? 200 : 500).json({
+    ok: result.code === 0,
+    output: result.output,
+  });
 });
 
 app.post("/setup/api/doctor", requireSetupAuth, async (_req, res) => {
