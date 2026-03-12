@@ -800,6 +800,15 @@ app.post("/setup/api/config-set", requireSetupAuth, async (req, res) => {
   });
 });
 
+app.post("/setup/api/restart-gateway", requireSetupAuth, async (_req, res) => {
+  try {
+    await restartGateway();
+    return res.json({ ok: true, output: "Gateway restarted." });
+  } catch (err) {
+    return res.status(500).json({ ok: false, output: String(err) });
+  }
+});
+
 app.post("/setup/api/doctor", requireSetupAuth, async (_req, res) => {
   const args = ["doctor", "--non-interactive", "--repair"];
   const result = await runCmd(OPENCLAW_NODE, clawArgs(args));
