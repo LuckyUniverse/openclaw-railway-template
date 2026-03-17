@@ -879,7 +879,10 @@ function createTuiWebSocketServer(httpServer) {
       if (ptyProcess) return;
 
       console.log(`[tui] spawning PTY with ${cols}x${rows}`);
-      ptyProcess = pty.spawn(OPENCLAW_NODE, clawArgs(["tui"]), {
+      const tuiShell = process.env.TUI_SHELL_MODE === "true";
+      const tuiCmd = tuiShell ? "/bin/bash" : OPENCLAW_NODE;
+      const tuiArgs = tuiShell ? [] : clawArgs(["tui"]);
+      ptyProcess = pty.spawn(tuiCmd, tuiArgs, {
         name: "xterm-256color",
         cols,
         rows,
