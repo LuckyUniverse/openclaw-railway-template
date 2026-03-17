@@ -943,10 +943,18 @@ function createTuiWebSocketServer(httpServer) {
       }
     });
 
+    // WebSocket keepalive ping to prevent Railway proxy from closing idle connections
+    const pingInterval = setInterval(() => {
+      if (ws.readyState === ws.OPEN) {
+        ws.ping();
+      }
+    }, 15000); // ping every 15 seconds
+
     ws.on("close", () => {
       console.log("[tui] session closed");
       clearTimeout(idleTimer);
       clearTimeout(maxSessionTimer);
+      clearInterval(pingInterval);
       if (ptyProcess) {
         try {
           ptyProcess.kill();
